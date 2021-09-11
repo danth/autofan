@@ -2,6 +2,7 @@ import Data.List ( intercalate )
 import Data.Maybe ( mapMaybe )
 import Text.XML.Light ( Element, QName(QName), findAttr, findElement, findElements, parseXML, onlyElems )
 import Network.HTTP ( Request, simpleHTTP, getRequest, getResponseBody )
+import Network.URI ( escapeURIString, isUnreserved )
 import System.Environment ( getArgs )
 import System.Exit ( ExitCode(ExitFailure), exitWith )
 import System.IO ( hPutStrLn, stderr )
@@ -30,10 +31,13 @@ findElements' = findElements . simpleName
 type Query = [(String, String)]
 type URL = String
 
+escapeURL :: URL -> URL
+escapeURL = escapeURIString isUnreserved
+
 buildURL :: Query -> URL
 buildURL = ("http://weather.service.msn.com/find.aspx?" ++) . encodeQuery
   where encodeQuery :: Query -> String
-        encodeQuery = intercalate "&" . map (\(a, b) -> a ++ "=" ++ b)
+        encodeQuery = intercalate "&" . map (\(a, b) -> a ++ "=" ++ escapeURL b)
 
 type Location = String
 type Temperature = Double
