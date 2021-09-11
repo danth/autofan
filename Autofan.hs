@@ -1,3 +1,5 @@
+import Control.Concurrent ( threadDelay )
+import Control.Monad ( forever )
 import Data.List ( intercalate )
 import Data.Maybe ( mapMaybe )
 import Text.XML.Light ( Element, QName(QName), findAttr, findElement, findElements, parseXML, onlyElems )
@@ -66,8 +68,22 @@ getTemperature location = do
 
 -- Main
 
+threshold :: Temperature
+threshold = 20
+
+fanOn :: IO ()
+fanOn = writeFile "/sys/bus/usb/drivers/usb/bind" "1-1"
+
+fanOff :: IO ()
+fanOff = writeFile "/sys/bus/usb/drivers/usb/unbind" "1-1"
+
 main' :: Location -> IO ()
-main' location = print =<< getTemperature location
+main' location = forever $ do
+  temperature <- getTemperature location
+  if temperature > threshold
+     then fanOn
+     else fanOff
+  threadDelay 300000000 -- 5 minutes as microseconds
 
 incorrectUsage :: String -> IO ()
 incorrectUsage message = do
