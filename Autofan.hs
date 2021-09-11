@@ -1,5 +1,6 @@
 import Control.Concurrent ( threadDelay )
-import Control.Monad ( forever )
+import Control.Monad ( forever, void )
+import Control.Monad.State ( StateT, get, liftIO, put, runStateT )
 import Data.List ( intercalate )
 import Data.Maybe ( mapMaybe )
 import Text.XML.Light ( Element, QName(QName), findAttr, findElement, findElements, parseXML, onlyElems )
@@ -71,19 +72,35 @@ getTemperature location = do
 threshold :: Temperature
 threshold = 20
 
-fanOn :: IO ()
-fanOn = writeFile "/sys/bus/usb/drivers/usb/bind" "1-1"
+data FanState = Off | On
 
-fanOff :: IO ()
-fanOff = writeFile "/sys/bus/usb/drivers/usb/unbind" "1-1"
+type FanIO = StateT FanState IO
 
-main' :: Location -> IO ()
+fanOn :: FanIO ()
+fanOn = do
+  state <- get
+  case state of
+    Off -> do
+      liftIO $ writeFile "/sys/bus/usb/drivers/usb/bind" "1-1"
+      put On
+    On -> return ()
+
+fanOff :: FanIO ()
+fanOff = do
+  state <- get
+  case state of
+    On -> do
+      liftIO $ writeFile "/sys/bus/usb/drivers/usb/unbind" "1-1"
+      put Off
+    Off -> return ()
+
+main' :: Location -> FanIO ()
 main' location = forever $ do
-  temperature <- getTemperature location
+  temperature <- liftIO $ getTemperature location
   if temperature > threshold
      then fanOn
      else fanOff
-  threadDelay 300000000 -- 5 minutes as microseconds
+  liftIO $ threadDelay 300000000 -- 5 minutes as microseconds
 
 incorrectUsage :: String -> IO ()
 incorrectUsage message = do
@@ -95,5 +112,5 @@ main = do
   arguments <- getArgs
   case arguments of
     [] -> incorrectUsage "Place name should be passed as a command-line argument"
-    [location] -> main' location
+    [location] -> void $ runStateT (main' location) Off
     _ -> incorrectUsage "Too many arguments"

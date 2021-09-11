@@ -47,6 +47,8 @@
               ExecStart = "${autofan} ${escapeShellArg cfg.location}";
             };
 
+            # The Haskell program assumes that the fan is off when it starts
+            preStart = "echo 1-1 >/sys/bus/usb/drivers/usb/unbind || exit 0";
             postStop = "echo 1-1 >/sys/bus/usb/drivers/usb/unbind || exit 0";
           };
         };
