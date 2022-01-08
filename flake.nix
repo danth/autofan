@@ -6,14 +6,14 @@
 
   outputs = { self, nixpkgs, utils, ... }:
     let
-      package = { haskell, stdenvNoCC }:
+      package = { haskellPackages, stdenvNoCC }:
         stdenvNoCC.mkDerivation {
           name = "autofan";
 
           src = ./.;
           buildInputs = [
-            (haskell.packages.ghc901.ghcWithPackages
-              (haskellPackages: with haskellPackages; [ HTTP xml ]))
+            (haskellPackages.ghcWithPackages
+              (ps: with ps; [ HTTP xml ]))
           ];
 
           buildPhase = "ghc -Wall Autofan.hs";
